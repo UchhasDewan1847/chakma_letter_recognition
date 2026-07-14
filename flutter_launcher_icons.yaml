@@ -1,0 +1,12 @@
+# Launcher icon config — regenerate with: dart run flutter_launcher_icons
+# Sources are derived from assets/images/logo/logo-1rst.png (square-cropped).
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/logo/app_icon.png
+  # Android 8+ adaptive icon: white background, emblem shrunk into the
+  # safe zone so round/squircle masks don't clip it.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/logo/app_icon_foreground.png
+  # iOS rejects icons with an alpha channel.
+  remove_alpha_ios: true

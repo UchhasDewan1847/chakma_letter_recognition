@@ -10,12 +10,17 @@ class ChakmaLetter {
   final String name; // romanized name, e.g. "kaa" — or "7" for a digit
 }
 
-/// The basic Chakma alphabet: independent vowels first, then consonants.
-const chakmaLetters = [
+/// The four independent vowels (U+11103–U+11106). They open the alphabet
+/// and are practiced in their own category with their own model.
+const chakmaVowels = [
   ChakmaLetter('\u{11103}', 'aa'),
   ChakmaLetter('\u{11104}', 'i'),
   ChakmaLetter('\u{11105}', 'u'),
   ChakmaLetter('\u{11106}', 'e'),
+];
+
+/// The 32 consonants (U+11107–U+11126) — the Consonants category's grid.
+const chakmaConsonants = [
   ChakmaLetter('\u{11107}', 'kaa'),
   ChakmaLetter('\u{11108}', 'khaa'),
   ChakmaLetter('\u{11109}', 'gaa'),
@@ -49,6 +54,10 @@ const chakmaLetters = [
   ChakmaLetter('\u{11125}', 'saa'),
   ChakmaLetter('\u{11126}', 'haa'),
 ];
+
+/// The whole basic alphabet, vowels first — used to look up any glyph's
+/// name no matter which model produced it.
+const chakmaLetters = [...chakmaVowels, ...chakmaConsonants];
 
 /// The Chakma digits 0–9 (U+11136–U+1113F), named by their numeric value.
 const chakmaNumbers = [

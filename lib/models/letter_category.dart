@@ -1,12 +1,11 @@
-import '../services/class_label_map.dart';
 import 'chakma_letter.dart';
 
-/// One practice category on the home screen (consonants, numbers, …).
+/// One practice category on the home screen (consonants, numbers, vowels).
 ///
 /// Each category bundles the characters to practice with the ONNX model
 /// and labels file that judge them, so screens don't need to know which
-/// model they're talking to. When the vowel model is trained, adding it
-/// is one more entry in [practiceCategories] plus its two asset files.
+/// model they're talking to. Adding a future category is one more entry
+/// in [practiceCategories] plus its two asset files.
 class LetterCategory {
   const LetterCategory({
     required this.title,
@@ -31,12 +30,11 @@ class LetterCategory {
   final String labelsAsset;
 }
 
-final consonantsCategory = LetterCategory(
+const consonantsCategory = LetterCategory(
   title: 'Consonants',
   itemNoun: 'letter',
   emblemGlyph: '\u{11107}', // kaa
-  // Only the letters the current model was trained on.
-  letters: practiceableLetters,
+  letters: chakmaConsonants,
   modelAsset: 'assets/models/mobilenetv2_mobile.onnx',
   labelsAsset: 'assets/class_labels.json',
 );
@@ -50,5 +48,14 @@ const numbersCategory = LetterCategory(
   labelsAsset: 'assets/class_labels_numbers.json',
 );
 
+const vowelsCategory = LetterCategory(
+  title: 'Vowels',
+  itemNoun: 'letter',
+  emblemGlyph: '\u{11104}', // i
+  letters: chakmaVowels,
+  modelAsset: 'assets/models/chakma_vowel_detector.onnx',
+  labelsAsset: 'assets/class_labels_vowels.json',
+);
+
 /// The categories that are ready to practice today.
-final practiceCategories = [consonantsCategory, numbersCategory];
+const practiceCategories = [consonantsCategory, numbersCategory, vowelsCategory];

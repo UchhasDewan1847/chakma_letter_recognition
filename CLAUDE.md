@@ -18,28 +18,29 @@ Ojha Paath Sigi (displayed name; the Dart package, applicationId and repo folder
 
 ## Architecture
 
-Screen flow: `WelcomeScreen` (onboarding PageView over the full village illustration, text on a dark bottom gradient) → `HomeScreen` (motivational header + one card per category: Consonants, Numbers, and a disabled "Vowels — coming soon" teaser) → `LetterSelectScreen` (grid for the chosen category) → `PracticeScreen` (draw + check). A "Free draw" FAB on `LetterSelectScreen` opens `FreeDrawScreen` (no target; shows the closest class for whatever is drawn, judged by that category's model).
+Screen flow: `WelcomeScreen` (onboarding PageView over the full village illustration, text on a dark bottom gradient) → `HomeScreen` (motivational header + one card per category: Consonants, Numbers, Vowels) → `LetterSelectScreen` (grid for the chosen category) → `PracticeScreen` (draw + check). A "Free draw" FAB on `LetterSelectScreen` opens `FreeDrawScreen` (no target; shows the closest class for whatever is drawn, judged by that category's model).
 
 All screens after onboarding sit on `AppBackground` (`lib/widgets/app_background.dart`): the pre-blurred illustration + a translucent surface wash, with the screen's Scaffold and AppBar made transparent. The blur is baked into the asset (no runtime BackdropFilter) — regenerate both background jpgs from `potentialBackGround3.jpg` with PIL if the artwork changes (downscale for welcome; downscale + GaussianBlur 18 for the app-wide one). The drawing board is unaffected: it paints its own solid white inside its RepaintBoundary, so model input stays white.
 
-- `lib/models/letter_category.dart` — `LetterCategory` bundles a category's title, characters, and its own model + labels assets; `practiceCategories` lists the ready ones. Screens receive a category and never hardcode a model. Adding the future vowel category = one entry here + two asset files.
-- `lib/models/chakma_letter.dart` — defines `ChakmaLetter` (Unicode glyph + romanized name like "kaa") and two lists: `chakmaLetters` (36 letters, U+11103–U+11126) and `chakmaNumbers` (digits 0–9, U+11136–U+1113F, named "0".."9"). The consonant grid shows `practiceableLetters` (from `class_label_map.dart`): `chakmaLetters` minus `unsupportedLetterNames`, the letters the current model wasn't trained on.
+- `lib/models/letter_category.dart` — `LetterCategory` bundles a category's title, characters, and its own model + labels assets; `practiceCategories` lists the three live ones (consonants, numbers, vowels). Screens receive a category and never hardcode a model. Adding a category = one entry here + two asset files.
+- `lib/models/chakma_letter.dart` — defines `ChakmaLetter` (Unicode glyph + romanized name like "kaa") and the lists `chakmaVowels` (𑄃𑄄𑄅𑄆, U+11103–U+11106), `chakmaConsonants` (32 letters, U+11107–U+11126) and `chakmaNumbers` (digits 0–9, U+11136–U+1113F, named "0".."9"); `chakmaLetters` is vowels + consonants concatenated, used for glyph→name lookup. Each category's grid shows its own list — 𑄃 ("aa") lives only in the Vowels grid even though the consonant model also has an "aa" class.
 - `lib/widgets/drawing_board.dart` — `DrawingController` (ChangeNotifier holding strokes; owns undo/clear) is deliberately separate from the `DrawingBoard` widget so screens own drawing state. The board is wrapped in a `RepaintBoundary` whose GlobalKey lets `PracticeScreen` snapshot the canvas as an image for inference.
 - `lib/services/letter_recognizer.dart` — constructed with a category's model/labels assets, loads them via `onnxruntime`, preprocesses the snapshot, runs inference, returns top-3 `Prediction`s.
-- `lib/services/class_label_map.dart` — translates model labels into character names. Consonant labels look like `"1-𑄇"` (dataset class number, dash, glyph); number labels are bare glyphs like `"𑄶"`. The glyph part joins directly to `chakmaLetters`/`chakmaNumbers`. Screens display labels through `displayLabel()` ("𑄇  kaa", "𑄶  0"), and `PracticeScreen` counts a match when the predicted label's name equals the target's name. `test/class_label_map_test.dart` checks every JSON label resolves and documents the coverage gap below.
+- `lib/services/class_label_map.dart` — translates model labels into character names. Consonant labels look like `"1-𑄇"` (dataset class number, dash, glyph); number and vowel labels are bare glyphs like `"𑄶"`/`"𑄃"`. The glyph part joins directly to `chakmaLetters`/`chakmaNumbers`. Screens display labels through `displayLabel()` ("𑄇  kaa", "𑄶  0"), and `PracticeScreen` counts a match when the predicted label's name equals the target's name. `test/class_label_map_test.dart` checks every JSON label resolves, that each model's label order matches its grid list, and pins the consonant model's one extra class ("aa") — if a retrained model breaks that test, revisit which grid each letter belongs to.
 
 ### ML preprocessing contract (verified empirically, do not change)
 
-Both models are MobileNetV2 with the same pipeline: resize to 224×224 (bilinear) → RGB → scale to 0–1 → **ImageNet normalization** ((x − mean)/std with mean [0.485, 0.456, 0.406], std [0.229, 0.224, 0.225]) → channel-first `[1, 3, 224, 224]`.
+All three models are MobileNetV2 with the same pipeline: resize to 224×224 (bilinear) → RGB → scale to 0–1 → **ImageNet normalization** ((x − mean)/std with mean [0.485, 0.456, 0.406], std [0.229, 0.224, 0.225]) → channel-first `[1, 3, 224, 224]`.
 - Consonants (`mobilenetv2_mobile.onnx`, 33 classes → `class_labels.json[i]`): probed 2026-07-13, 28/33 top-1 on font-rendered glyphs with ImageNet norm vs 5/33 with plain 0–1.
 - Numbers (`chakma_number_detector.onnx`, 10 classes → `class_labels_numbers.json[i]`): probed 2026-07-14 (`probe_numbers.py` pattern), 8/10 top-1 with ImageNet norm vs 2/10 with plain 0–1; shape-sensitive (blank/circle/cross logits differ), so genuinely trained.
+- Vowels (`chakma_vowel_detector.onnx`, 4 classes → `class_labels_vowels.json[i]`): probed 2026-07-15, shape-sensitive. Font-render accuracy is 3/4 in *every* regime (ImageNet, 0–1, ×2−1) — 𑄅 "u" is the weak class, drifting to 𑄃/𑄆 — so the regime probe couldn't discriminate; ImageNet norm was kept because it matches the sibling models and gave the highest correct-class confidence (0.88 mean vs 0.76). If users report 𑄅 never matching, suspect the model, not the pipeline.
 
 If a model is ever swapped, re-probe before assuming the same contract (shape-sensitivity first: blank vs circle vs cross logits must differ meaningfully).
 
 ### Known open items
 
-- The 33-class consonant model covers the 32 consonants + "aa" only; i (𑄄), u (𑄅), e (𑄆) are hidden from the grid via `unsupportedLetterNames` in `class_label_map.dart`. If the model is retrained with those classes, empty that set — a test fails if it drifts out of sync with `class_labels.json`.
-- A 4-letter vowel model is planned. When it arrives: probe it in Python first, add a `vowelsCategory` to `letter_category.dart`, replace the disabled teaser card in `home_screen.dart`, and reconsider `unsupportedLetterNames`/the "aa" overlap between categories.
+- The vowel model is weak on 𑄅 "u" (see contract above); if practice for it frustrates users, it needs retraining.
+- In Free draw with the Consonants category, the model can still answer "𑄃  aa" (its 33rd class) even though 𑄃 is not in the consonant grid — harmless, but worth knowing.
 - `assets/models/self_chakmanet_mobile.onnx` is the superseded broken model, still bundled (~1.2 MB of APK weight); safe to delete once the user confirms.
 - `LetterRecognizer.load()` returns an error string the UI shows, so the app must keep working when the model file is absent.
 - Chakma glyphs render via system fonts; on devices without Chakma support they show as boxes — the fix is bundling Noto Sans Chakma (see `assets/letters/README.md`).
@@ -52,6 +53,8 @@ If a model is ever swapped, re-probe before assuming the same contract (shape-se
 - `assets/images/logo/logo-1rst.png` — the logo shown on `HomeScreen` (icon fallback if missing)
 - `assets/models/mobilenetv2_mobile.onnx` — consonant classifier (9 MB)
 - `assets/models/chakma_number_detector.onnx` — number classifier (8.9 MB)
+- `assets/models/chakma_vowel_detector.onnx` — vowel classifier (8.9 MB)
 - `assets/class_labels.json` — consonant index → label list (33 labels, `"number-glyph"` form)
 - `assets/class_labels_numbers.json` — number index → label list (10 bare glyphs, 𑄶–𑄿 in 0–9 order)
-- both label JSONs are registered individually in pubspec.yaml
+- `assets/class_labels_vowels.json` — vowel index → label list (4 bare glyphs, 𑄃𑄄𑄅𑄆 in aa/i/u/e order)
+- all three label JSONs are registered individually in pubspec.yaml

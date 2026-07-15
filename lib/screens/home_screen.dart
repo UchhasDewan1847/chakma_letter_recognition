@@ -5,7 +5,7 @@ import '../widgets/app_background.dart';
 import 'letter_select_screen.dart';
 
 /// The app's home page: a motivational header plus one card per practice
-/// category (consonants, numbers, and a "coming soon" teaser for vowels).
+/// category (consonants, numbers, vowels).
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -74,21 +74,6 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              // ---- Vowels: model not trained yet ----
-              _CategoryCard(
-                emblem: '\u{11104}', // i
-                title: 'Vowels',
-                subtitle: '4 letters — coming soon',
-                enabled: false,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content:
-                          Text('The vowel model is still in training — soon!'),
-                    ),
-                  );
-                },
-              ),
             ],
           ),
         ),
@@ -103,20 +88,16 @@ class _CategoryCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.enabled = true,
   });
 
   final String emblem;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Disabled cards (vowels) fade out but still explain themselves on tap.
-    final fade = enabled ? 1.0 : 0.5;
 
     return Card(
       elevation: 0,
@@ -135,14 +116,13 @@ class _CategoryCard extends StatelessWidget {
                 height: 64,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(fade),
+                  color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   emblem,
                   style: theme.textTheme.headlineMedium?.copyWith(
-                    color:
-                        theme.colorScheme.onPrimaryContainer.withOpacity(fade),
+                    color: theme.colorScheme.onPrimaryContainer,
                   ),
                 ),
               ),
@@ -155,23 +135,22 @@ class _CategoryCard extends StatelessWidget {
                       title,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface.withOpacity(fade),
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant
-                            .withOpacity(fade),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
               Icon(
-                enabled ? Icons.chevron_right : Icons.lock_clock,
-                color: theme.colorScheme.onSurfaceVariant.withOpacity(fade),
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ],
           ),

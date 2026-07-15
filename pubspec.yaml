@@ -70,6 +70,7 @@ flutter:
     - assets/models/
     - assets/class_labels.json
     - assets/class_labels_numbers.json
+    - assets/class_labels_vowels.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

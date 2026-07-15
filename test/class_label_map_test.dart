@@ -17,6 +17,16 @@ void main() {
     File('assets/class_labels_numbers.json').readAsStringSync(),
   ) as List)
       .cast<String>();
+  final vowelLabels = (jsonDecode(
+    File('assets/class_labels_vowels.json').readAsStringSync(),
+  ) as List)
+      .cast<String>();
+
+  test('the alphabet is the 4 vowels plus the 32 consonants', () {
+    expect(chakmaVowels.length, 4);
+    expect(chakmaConsonants.length, 32);
+    expect(chakmaLetters.length, 36);
+  });
 
   test('class_labels.json has 33 unique number-glyph labels', () {
     expect(labels.length, 33);
@@ -35,23 +45,20 @@ void main() {
     }
   });
 
-  test('unsupportedLetterNames matches what the model actually lacks', () {
+  test('the consonant model covers every letter in the consonant grid', () {
     final covered = labels.map(letterNameForLabel).toSet();
-    final actuallyMissing = {
-      for (final letter in chakmaLetters)
-        if (!covered.contains(letter.name)) letter.name,
-    };
-    // If this fails after swapping the model/labels, update
-    // unsupportedLetterNames in class_label_map.dart to match.
-    expect(unsupportedLetterNames, actuallyMissing);
-  });
-
-  test('the grid shows exactly the letters the model knows', () {
-    expect(practiceableLetters.length,
-        chakmaLetters.length - unsupportedLetterNames.length);
-    for (final letter in practiceableLetters) {
-      expect(unsupportedLetterNames.contains(letter.name), isFalse);
+    for (final letter in chakmaConsonants) {
+      expect(covered.contains(letter.name), isTrue,
+          reason: '"${letter.name}" is in the grid but the model was not '
+              'trained on it — practicing it could never succeed');
     }
+    // The 33rd class is "aa" (𑄃), which is practiced in the Vowels
+    // category instead. If the consonant model is retrained and this
+    // fails, revisit which grid each letter belongs to.
+    final extras = covered.difference(
+      {for (final letter in chakmaConsonants) letter.name},
+    );
+    expect(extras, {'aa'});
   });
 
   test('displayLabel shows glyph plus name', () {
@@ -73,5 +80,20 @@ void main() {
     }
     expect(displayLabel('𑄶'), '𑄶  0');
     expect(displayLabel('𑄿'), '𑄿  9');
+  });
+
+  test('vowel labels are exactly the four vowels, in model-index order', () {
+    // Output index i of the vowel model maps to class_labels_vowels[i],
+    // which must line up with the vowels the grid offers.
+    expect(vowelLabels, [for (final v in chakmaVowels) v.glyph]);
+  });
+
+  test('every vowel label resolves and displays with its name', () {
+    for (final label in vowelLabels) {
+      expect(letterNameForLabel(label), isNotNull,
+          reason: 'vowel label "$label" has no name');
+    }
+    expect(displayLabel('𑄃'), '𑄃  aa');
+    expect(displayLabel('𑄆'), '𑄆  e');
   });
 }

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_screen.dart';
+
+/// The shared_preferences key that remembers onboarding was completed.
+/// [_WelcomeScreenState._finish] writes it; main() reads it on later
+/// launches to skip straight to the home screen.
+const seenOnboardingPrefsKey = 'seen_onboarding';
 
 /// Onboarding shown when the app opens.
 ///
@@ -36,6 +42,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   ];
 
   void _finish() {
+    // Remember the slides were seen so the next launch skips them.
+    // Fire-and-forget: no need to hold up navigation for a disk write.
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.setBool(seenOnboardingPrefsKey, true));
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
     );

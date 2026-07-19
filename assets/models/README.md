@@ -1,15 +1,19 @@
-# ONNX model goes here
+# Bundled ONNX models (the live versions)
 
-Place your trained Chakma letter recognition model in this folder, named:
+Every model here ships in the APK and is paired with a labels JSON in
+`assets/` — output index `i` maps to entry `i` of that model's own labels
+file. The pairs are wired up in `lib/models/letter_category.dart`.
 
-    chakma_model.onnx
+| Model | Labels | Category |
+|-------|--------|----------|
+| `chakma_consonents_detector.onnx` (v2) | `assets/class_labels_consonents.json` | Consonants |
+| `chakma_digits_detector.onnx` (v2) | `assets/class_labels_digits.json` | Numbers |
+| `chakma_vowel_detector.onnx` (v1) | `assets/class_labels_vowels.json` | Vowels |
+| `self_chakmanet_mobile.onnx` (v0) | — | Broken (untrained weights), kept until the user decides to drop it |
 
-When we wire up inference (next step), the app will load it from
-`assets/models/chakma_model.onnx` using the `onnxruntime` Flutter package.
+Superseded versions live in `model_archive/` at the repo root (kept out
+of `assets/` so they don't bloat the APK) — see its README for the full
+version history, probe results, and how to roll back.
 
-Things we'll need to know about the model before wiring it up:
-
-1. Input shape — e.g. [1, 1, 28, 28] (batch, channels, height, width)?
-2. Input color/scale — grayscale? Pixel values 0–1 or 0–255? Normalized (mean/std)?
-3. Ink polarity — white letter on black background, or black on white?
-4. Output — how many classes, and the index → letter mapping (label order)?
+Before swapping in any new model, probe it in Python first — see the
+"ML preprocessing contract" section in CLAUDE.md.

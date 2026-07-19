@@ -20,6 +20,16 @@ Ojha Paath Sigi (displayed name; the Dart package, applicationId and repo folder
 
 Screen flow: `WelcomeScreen` (onboarding PageView over the full village illustration, text on a dark bottom gradient) → `HomeScreen` (motivational header + one card per category: Consonants, Numbers, Vowels) → `LetterSelectScreen` (grid for the chosen category) → `PracticeScreen` (draw + check). A "Free draw" FAB on `LetterSelectScreen` opens `FreeDrawScreen` (no target; shows the closest class for whatever is drawn, judged by that category's model).
 
+Onboarding is first-launch-only: `main()` reads the `seen_onboarding` bool from `shared_preferences` and starts on `HomeScreen` when set; `WelcomeScreen._finish` writes it (key constant `seenOnboardingPrefsKey` lives in `welcome_screen.dart`). The permanent instructions live in `InstructionsScreen` (`lib/screens/instructions_screen.dart`), one long scrollable English how-to page opened from the paper icon at the top right of `HomeScreen`. Result feedback is deliberately number-free: `PracticeScreen` grades phrases on match + confidence (≥0.75 "clearly matches"; miss but target in top-3 → "So close!"), and `FreeDrawScreen` shows confidence words ("quite sure"/"not fully sure"/"only guessing") instead of percentages.
+
+`PracticeScreen` has three modes (`PracticeMode` enum: Trace/Copy/Memory, SegmentedButton under the target card). Trace overlays the glyph in 30 % grey on the board — deliberately *outside* the DrawingBoard's RepaintBoundary, inside an IgnorePointer, so the model snapshot stays clean white and touches pass through. Memory hides the sample behind "?" until the card is held (peek). A match fires `ConfettiBurst` (`lib/widgets/confetti_burst.dart`, dependency-free one-shot CustomPainter) plus a haptic buzz.
+
+Progress: `lib/services/progress_store.dart` counts attempts/matches per glyph in shared_preferences (glyphs are unique across categories, so they're the keys); `masteryTarget` = 3 matches earns the star. `PracticeScreen` records on every check; `LetterSelectScreen` shows stars and `HomeScreen` shows "X of N mastered" bars — both reload after `await Navigator.push(...)` returns so fresh stars appear immediately.
+
+Noto Sans Chakma (41 KB, SIL OFL) is bundled in `assets/fonts/` and applied in `main.dart` as `fontFamilyFallback` on the theme's text themes: Latin text keeps the default font, Chakma codepoints fall through to Noto, so glyphs render on devices without a Chakma system font.
+
+Model versioning: superseded model+labels pairs live in `model_archive/` at the repo root — intentionally outside `assets/` so they stay in git without shipping in the APK. Its README has the version map, probe history, and the roll-back procedure. `assets/models/README.md` maps the live pairs.
+
 All screens after onboarding sit on `AppBackground` (`lib/widgets/app_background.dart`): the pre-blurred illustration + a translucent surface wash, with the screen's Scaffold and AppBar made transparent. The blur is baked into the asset (no runtime BackdropFilter) — regenerate both background jpgs from `potentialBackGround3.jpg` with PIL if the artwork changes (downscale for welcome; downscale + GaussianBlur 18 for the app-wide one). The drawing board is unaffected: it paints its own solid white inside its RepaintBoundary, so model input stays white.
 
 - `lib/models/letter_category.dart` — `LetterCategory` bundles a category's title, characters, and its own model + labels assets; `practiceCategories` lists the three live ones (consonants, numbers, vowels). Screens receive a category and never hardcode a model. Adding a category = one entry here + two asset files.
@@ -31,8 +41,8 @@ All screens after onboarding sit on `AppBackground` (`lib/widgets/app_background
 ### ML preprocessing contract (verified empirically, do not change)
 
 All three models are MobileNetV2 with the same pipeline: resize to 224×224 (bilinear) → RGB → scale to 0–1 → **ImageNet normalization** ((x − mean)/std with mean [0.485, 0.456, 0.406], std [0.229, 0.224, 0.225]) → channel-first `[1, 3, 224, 224]`.
-- Consonants (`mobilenetv2_mobile.onnx`, 33 classes → `class_labels.json[i]`): probed 2026-07-13, 28/33 top-1 on font-rendered glyphs with ImageNet norm vs 5/33 with plain 0–1.
-- Numbers (`chakma_number_detector.onnx`, 10 classes → `class_labels_numbers.json[i]`): probed 2026-07-14 (`probe_numbers.py` pattern), 8/10 top-1 with ImageNet norm vs 2/10 with plain 0–1; shape-sensitive (blank/circle/cross logits differ), so genuinely trained.
+- Consonants (`chakma_consonents_detector.onnx`, 32 classes → `class_labels_consonents.json[i]`): probed 2026-07-19 (`probe_new_models.py` pattern), 32/32 top-1 on font-rendered glyphs with ImageNet norm (0.96 mean conf) vs 25/32 with plain 0–1; shape-sensitive. Replaced `mobilenetv2_mobile.onnx` — the old 33rd "aa" (𑄃) class is gone, so model classes now match the consonant grid exactly.
+- Numbers (`chakma_digits_detector.onnx`, 10 classes → `class_labels_digits.json[i]`): probed 2026-07-19, 8/10 top-1 with ImageNet norm (0.92 mean conf, best regime); shape-sensitive. On font renders 𑄸 "2" and 𑄽 "7" drift to 𑄺 "4" — same weak spots as the `chakma_number_detector.onnx` it replaced (label order unchanged).
 - Vowels (`chakma_vowel_detector.onnx`, 4 classes → `class_labels_vowels.json[i]`): probed 2026-07-15, shape-sensitive. Font-render accuracy is 3/4 in *every* regime (ImageNet, 0–1, ×2−1) — 𑄅 "u" is the weak class, drifting to 𑄃/𑄆 — so the regime probe couldn't discriminate; ImageNet norm was kept because it matches the sibling models and gave the highest correct-class confidence (0.88 mean vs 0.76). If users report 𑄅 never matching, suspect the model, not the pipeline.
 
 If a model is ever swapped, re-probe before assuming the same contract (shape-sensitivity first: blank vs circle vs cross logits must differ meaningfully).
@@ -40,10 +50,9 @@ If a model is ever swapped, re-probe before assuming the same contract (shape-se
 ### Known open items
 
 - The vowel model is weak on 𑄅 "u" (see contract above); if practice for it frustrates users, it needs retraining.
-- In Free draw with the Consonants category, the model can still answer "𑄃  aa" (its 33rd class) even though 𑄃 is not in the consonant grid — harmless, but worth knowing.
-- `assets/models/self_chakmanet_mobile.onnx` is the superseded broken model, still bundled (~1.2 MB of APK weight); safe to delete once the user confirms.
+- The digit model's font-render misses (𑄸 "2", 𑄽 "7" → 𑄺 "4") may or may not show up on real handwriting; if users report those digits never matching, suspect the model.
+- `assets/models/self_chakmanet_mobile.onnx` is the superseded broken model, still bundled (~1.2 MB of APK weight); the user wants old models kept for backtracking — if it ever moves, it belongs in `model_archive/`, not the bin.
 - `LetterRecognizer.load()` returns an error string the UI shows, so the app must keep working when the model file is absent.
-- Chakma glyphs render via system fonts; on devices without Chakma support they show as boxes — the fix is bundling Noto Sans Chakma (see `assets/letters/README.md`).
 
 ## Assets
 
@@ -51,10 +60,12 @@ If a model is ever swapped, re-probe before assuming the same contract (shape-se
 - `assets/images/background_blurred.jpg` — pre-blurred app-wide background (13 KB)
 - `assets/images/potentialbackground1.jpg` / `potentialBackGround3.jpg` — the user's original artwork candidates; they ship in the APK (~0.9 MB) because the whole images/ dir is a registered asset — move them out of assets/ if APK size matters
 - `assets/images/logo/logo-1rst.png` — the logo shown on `HomeScreen` (icon fallback if missing)
-- `assets/models/mobilenetv2_mobile.onnx` — consonant classifier (9 MB)
-- `assets/models/chakma_number_detector.onnx` — number classifier (8.9 MB)
+- `assets/models/chakma_consonents_detector.onnx` — consonant classifier (9 MB)
+- `assets/models/chakma_digits_detector.onnx` — number classifier (8.9 MB)
 - `assets/models/chakma_vowel_detector.onnx` — vowel classifier (8.9 MB)
-- `assets/class_labels.json` — consonant index → label list (33 labels, `"number-glyph"` form)
-- `assets/class_labels_numbers.json` — number index → label list (10 bare glyphs, 𑄶–𑄿 in 0–9 order)
+- `assets/class_labels_consonents.json` — consonant index → label list (32 labels, `"number-glyph"` form)
+- `assets/class_labels_digits.json` — number index → label list (10 bare glyphs, 𑄶–𑄿 in 0–9 order)
 - `assets/class_labels_vowels.json` — vowel index → label list (4 bare glyphs, 𑄃𑄄𑄅𑄆 in aa/i/u/e order)
 - all three label JSONs are registered individually in pubspec.yaml
+- `assets/fonts/NotoSansChakma-Regular.ttf` — bundled Chakma font (registered under `fonts:` in pubspec, not `assets:`)
+- `model_archive/` (repo root, NOT an asset) — superseded model+labels version pairs; see its README

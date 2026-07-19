@@ -10,11 +10,11 @@ void main() {
   // flutter test runs from the project root, so the asset is readable
   // directly from disk without a widget binding.
   final labels = (jsonDecode(
-    File('assets/class_labels.json').readAsStringSync(),
+    File('assets/class_labels_consonents.json').readAsStringSync(),
   ) as List)
       .cast<String>();
   final numberLabels = (jsonDecode(
-    File('assets/class_labels_numbers.json').readAsStringSync(),
+    File('assets/class_labels_digits.json').readAsStringSync(),
   ) as List)
       .cast<String>();
   final vowelLabels = (jsonDecode(
@@ -28,9 +28,9 @@ void main() {
     expect(chakmaLetters.length, 36);
   });
 
-  test('class_labels.json has 33 unique number-glyph labels', () {
-    expect(labels.length, 33);
-    expect(labels.toSet().length, 33);
+  test('consonant labels are 32 unique number-glyph entries', () {
+    expect(labels.length, 32);
+    expect(labels.toSet().length, 32);
     for (final label in labels) {
       expect(RegExp(r'^\d+-.+$').hasMatch(label), isTrue,
           reason: 'label "$label" is not in "number-glyph" form');
@@ -52,23 +52,23 @@ void main() {
           reason: '"${letter.name}" is in the grid but the model was not '
               'trained on it — practicing it could never succeed');
     }
-    // The 33rd class is "aa" (𑄃), which is practiced in the Vowels
-    // category instead. If the consonant model is retrained and this
-    // fails, revisit which grid each letter belongs to.
+    // The retrained model dropped the old 33rd "aa" (𑄃) class, so the
+    // model's classes and the consonant grid now match exactly. If a
+    // future retrain adds classes, revisit which grid each letter
+    // belongs to.
     final extras = covered.difference(
       {for (final letter in chakmaConsonants) letter.name},
     );
-    expect(extras, {'aa'});
+    expect(extras, isEmpty);
   });
 
   test('displayLabel shows glyph plus name', () {
     expect(displayLabel('1-𑄇'), '𑄇  kaa');
-    expect(displayLabel('33-𑄃'), '𑄃  aa');
     expect(displayLabel('99-?'), '99-?');
   });
 
   test('number labels are exactly the ten digits, in model-index order', () {
-    // Output index i of the number model maps to class_labels_numbers[i],
+    // Output index i of the digit model maps to class_labels_digits[i],
     // which must line up with the digits the grid offers.
     expect(numberLabels, [for (final n in chakmaNumbers) n.glyph]);
   });

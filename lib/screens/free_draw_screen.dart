@@ -88,6 +88,13 @@ class _FreeDrawScreenState extends State<FreeDrawScreen> {
     setState(() => _predictions = const []);
   }
 
+  /// A human word for the model's confidence — friendlier than "89.2%".
+  static String _confidenceWords(double probability) {
+    if (probability >= 0.75) return 'and it\'s quite sure';
+    if (probability >= 0.4) return 'but it\'s not fully sure';
+    return 'but it\'s only guessing';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -149,9 +156,11 @@ class _FreeDrawScreenState extends State<FreeDrawScreen> {
                               ),
                             ),
                             Text(
-                              '${(_predictions.first.probability * 100).toStringAsFixed(1)}%',
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                              _confidenceWords(
+                                  _predictions.first.probability),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),

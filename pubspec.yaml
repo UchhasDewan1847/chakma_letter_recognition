@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   onnxruntime: ^1.4.1
   image: ^4.8.0
+  # Tiny on-device key-value store; remembers that onboarding was already seen.
+  shared_preferences: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -68,8 +70,8 @@ flutter:
     - assets/images/
     - assets/letters/
     - assets/models/
-    - assets/class_labels.json
-    - assets/class_labels_numbers.json
+    - assets/class_labels_consonents.json
+    - assets/class_labels_digits.json
     - assets/class_labels_vowels.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -78,22 +80,10 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/assets-and-images/#from-packages
 
-  # To add custom fonts to your application, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/custom-fonts/#from-packages
+  # Bundled so Chakma glyphs render on every device — without it, phones
+  # lacking a Chakma system font show every letter as an empty box.
+  # Noto fonts are under the SIL Open Font License (see assets/fonts/).
+  fonts:
+    - family: NotoSansChakma
+      fonts:
+        - asset: assets/fonts/NotoSansChakma-Regular.ttf

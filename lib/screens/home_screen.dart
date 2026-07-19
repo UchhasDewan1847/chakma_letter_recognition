@@ -1,13 +1,43 @@
 import 'package:flutter/material.dart';
 
 import '../models/letter_category.dart';
+import '../services/progress_store.dart';
 import '../widgets/app_background.dart';
+import 'instructions_screen.dart';
 import 'letter_select_screen.dart';
 
 /// The app's home page: a motivational header plus one card per practice
 /// category (consonants, numbers, vowels).
-class HomeScreen extends StatelessWidget {
+///
+/// Stateful because each card shows how many characters are mastered
+/// (see [ProgressStore]); the counts are loaded on open and again after
+/// every visit to a category, so progress is always current.
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  /// Mastered-character count per category title (empty until loaded).
+  Map<String, int> _masteredCounts = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    final counts = <String, int>{
+      for (final category in practiceCategories)
+        category.title:
+            (await ProgressStore.masteredGlyphs(category.letters)).length,
+    };
+    if (!mounted) return;
+    setState(() => _masteredCounts = counts);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +51,24 @@ class HomeScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              // ---- The "paper" button: opens the how-to page any time ----
+              // (The onboarding slides only appear on the very first launch,
+              // so this is the permanent home of the instructions.)
+              Align(
+                alignment: Alignment.topRight,
+                child: IconButton.filledTonal(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const InstructionsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.description_outlined),
+                  tooltip: 'How to use',
+                ),
+              ),
               // ---- Header: logo, app name, motivation ----
-              const SizedBox(height: 8),
               Center(
                 child: Image.asset(
                   'assets/images/logo/logo-1rst.png',
@@ -62,14 +108,18 @@ class HomeScreen extends StatelessWidget {
                 _CategoryCard(
                   emblem: category.emblemGlyph,
                   title: category.title,
-                  subtitle:
-                      '${category.letters.length} ${category.itemNoun}s to master',
-                  onTap: () {
-                    Navigator.of(context).push(
+                  masteredCount: _masteredCounts[category.title] ?? 0,
+                  totalCount: category.letters.length,
+                  itemNoun: category.itemNoun,
+                  onTap: () async {
+                    // Wait for the category to close, then re-read progress
+                    // — stars may have been earned while practicing.
+                    await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => LetterSelectScreen(category: category),
                       ),
                     );
+                    _loadProgress();
                   },
                 ),
                 const SizedBox(height: 12),
@@ -86,18 +136,23 @@ class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.emblem,
     required this.title,
-    required this.subtitle,
+    required this.masteredCount,
+    required this.totalCount,
+    required this.itemNoun,
     required this.onTap,
   });
 
   final String emblem;
   final String title;
-  final String subtitle;
+  final int masteredCount;
+  final int totalCount;
+  final String itemNoun;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final started = masteredCount > 0;
 
     return Card(
       elevation: 0,
@@ -140,14 +195,29 @@ class _CategoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      subtitle,
+                      started
+                          ? '$masteredCount of $totalCount ${itemNoun}s mastered'
+                          : '$totalCount ${itemNoun}s to master',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: totalCount == 0
+                            ? 0
+                            : masteredCount / totalCount,
+                        minHeight: 6,
+                        backgroundColor:
+                            theme.colorScheme.surface.withOpacity(0.6),
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               Icon(
                 Icons.chevron_right,
                 color: theme.colorScheme.onSurfaceVariant,

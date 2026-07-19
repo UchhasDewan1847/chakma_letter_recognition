@@ -35,8 +35,8 @@ const consonantsCategory = LetterCategory(
   itemNoun: 'letter',
   emblemGlyph: '\u{11107}', // kaa
   letters: chakmaConsonants,
-  modelAsset: 'assets/models/mobilenetv2_mobile.onnx',
-  labelsAsset: 'assets/class_labels.json',
+  modelAsset: 'assets/models/chakma_consonents_detector.onnx',
+  labelsAsset: 'assets/class_labels_consonents.json',
 );
 
 const numbersCategory = LetterCategory(
@@ -44,8 +44,8 @@ const numbersCategory = LetterCategory(
   itemNoun: 'number',
   emblemGlyph: '\u{11137}', // 1
   letters: chakmaNumbers,
-  modelAsset: 'assets/models/chakma_number_detector.onnx',
-  labelsAsset: 'assets/class_labels_numbers.json',
+  modelAsset: 'assets/models/chakma_digits_detector.onnx',
+  labelsAsset: 'assets/class_labels_digits.json',
 );
 
 const vowelsCategory = LetterCategory(

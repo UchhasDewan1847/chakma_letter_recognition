@@ -2,15 +2,13 @@ import '../models/chakma_letter.dart';
 
 /// Translates the models' class labels into character names.
 ///
-/// The consonant model's `assets/class_labels.json` holds labels like
-/// "1-𑄇": the training dataset's class number, a dash, then the Chakma
-/// glyph. The number and vowel models' label files hold bare glyphs like
-/// "𑄶" or "𑄃". Either way the glyph part is looked up directly in
-/// `chakmaLetters` / `chakmaNumbers` to get its name.
-///
-/// Note: the 33-class consonant model also knows "aa" (𑄃), but 𑄃 is
-/// practiced in the Vowels category, so the consonant grid shows only
-/// `chakmaConsonants`. test/class_label_map_test.dart pins this overlap.
+/// The consonant model's `assets/class_labels_consonents.json` holds
+/// labels like "1-𑄇": the training dataset's class number, a dash, then
+/// the Chakma glyph. The digit and vowel models' label files hold bare
+/// glyphs like "𑄶" or "𑄃". Either way the glyph part is looked up
+/// directly in `chakmaLetters` / `chakmaNumbers` to get its name.
+/// test/class_label_map_test.dart pins that each model's classes match
+/// its grid exactly.
 
 /// The glyph part of a raw label ("1-𑄇" -> "𑄇").
 String _glyphOfLabel(String rawLabel) {

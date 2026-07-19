@@ -1,10 +1,9 @@
 # Letter reference images (optional)
 
-Right now the app displays Chakma letters using Unicode text. If letters
-show up as empty boxes (□) on some devices, we have two options:
+The empty-box (□) problem is solved: Noto Sans Chakma is bundled in
+`assets/fonts/` and applied app-wide as a font fallback in `main.dart`,
+so Chakma letters render on every device.
 
-1. Bundle the "Noto Sans Chakma" font (preferred), or
-2. Put a reference image per letter in this folder (e.g. `kaa.png`)
-   and show images instead of text.
-
-Leave this folder alone for now unless you hit the empty-box problem.
+This folder stays around in case we ever want a reference *image* per
+letter (e.g. `kaa.png` with stroke-order arrows) — drawings can show
+things a font cannot.
